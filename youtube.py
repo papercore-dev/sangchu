@@ -1,4 +1,4 @@
-import httpx, re
+import httpx
 from pymongo import MongoClient
 from typing import TypeVar
 from warnings import warn
