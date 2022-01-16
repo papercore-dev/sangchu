@@ -1,33 +1,33 @@
-import gateway, youtube, threading, httpx
-from logging import basicConfig, INFO; basicConfig(level=INFO)
-from typing import TypeVar
+from gateway import Client
+from youtube import LastVideo
+from httpx import post
+from extensions import run_on_low_level
 
-bot = gateway.GatewayBot("A BOT TOKEN")
-Loop = TypeVar("Loop")
-
-def run_on_low_level(func):
-    def wrapper(*args, **kwargs):
-        threading.Thread(target=func, args=args, kwargs=kwargs).start()
-    return wrapper
+bot = Client()
 
 @run_on_low_level
-def youtube_notification(_youtube, _discord, _token, _api_key) -> Loop:
-    video = youtube.GetLastVideo(_youtube, _api_key)
-    
-    while True:
-        bot._wait(30000)
-        last_video = video.last_video_url
-        old_last_video = video.old_last_video["new_video"]
+def youtube_notification(
+    id: str,
+    discord_channel_id: int,
+    api_key: str,
+    token: str
+) -> None:
+    video = LastVideo(id, api_key)
+    last_video = video.last_video_url
+    old_last_video = video.old_last_video.get("new_video")
 
-        print("확인된: %s"%last_video)
+    while True:
+        bot.wait(30000)
+
+        print("확인된? %s"%last_video)
         print("새로운 비디오? %s"%old_last_video)
 
         if last_video != old_last_video:
-            video._update_last_video()
-            request = httpx.post(
-                "https://discord.com/api/v9/channels/%s/messages"%_discord,
+            video.update()
+            request = post(
+                "https://discord.com/api/v9/channels/%d/messages"%discord_channel_id,
                 headers={
-                    "authorization":  "Bot %s"%_token,
+                    "authorization":  "Bot %s"%token,
                     "content-type": "application/json"
                 },
                 json={
@@ -49,9 +49,11 @@ def youtube_notification(_youtube, _discord, _token, _api_key) -> Loop:
             )
             try:
                 request.raise_for_status()
-            except Exception as e:
-                print("Warning: %s"%e)
-        last_video = video.last_video_url
+            except Exception as error:
+                print("Warning: %s"%error)
 
-youtube_notification("UChDbYnv1Y_a1AacHM2u2X7w", "929078892118036480", bot.token, "A YOUTUBE API TOKEN")
-bot._login()
+        last_video = video.last_video_url
+        old_last_video = video.old_last_video
+
+youtube_notification("UChDbYnv1Y_a1AacHM2u2X7w", 929078892118036480, "A YOUTUBE API TOKEN", bot.token)
+bot.login("A DISCORD TOKEN")
