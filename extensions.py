@@ -1,5 +1,6 @@
 from warnings import warn
 from threading import Thread
+from requests import post
 
 class DictSerializerMixin(object):
     def __init__(self, **d):
@@ -19,5 +20,16 @@ class DictSerializerMixin(object):
 
 def run_on_low_level(func):
     def wrapper(*args, **kwargs):
-        Thread(target=func, args=args, kwargs=kwargs).start()
+        return Thread(target=func, args=args, kwargs=kwargs).start()
     return wrapper
+
+@run_on_low_level
+def say(token: str, channel_id: int, **attributes) -> None:
+    return post(
+        "https://discord.com/api/v9/channels/%d/messages"%channel_id,
+        headers={
+            "authorization": "Bot %s"%token,
+            "content-type": "application/json"
+        },
+        json=attributes
+    ).raise_for_status()
