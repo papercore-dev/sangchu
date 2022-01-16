@@ -1,46 +1,48 @@
-import websocket, time, json, logging
-from typing import TypeVar, Any
-from _thread import start_new_thread
+from time import sleep
+from typing import Any
+from extensions import run_on_low_level 
 
-GatewayResponse = TypeVar("GatewayResponse")
-GatewayRequest = TypeVar("GatewayRequest")
+import websocket, ujson, logging
 
-class GatewayBot:
-    def __init__(self, token: Any):
-        if not isinstance(token, str):
-            raise TypeError
-        
+class Client:
+    def __init__(self):
         self.ready = False
-        self.token = token
+        self.token = None
+        self.event = None
         self.ws = websocket.WebSocket()
 
-    def _send(self, request: GatewayRequest) -> GatewayResponse:
+    def send(self, request: Any) -> None:
         logging.info(f"{request}를 디스코드 게이트웨이에 보내다!")
-        self.ws.send(json.dumps(request))
+        self.ws.send(ujson.dumps(request))
 
-    def _wait(self, ms: Any) -> GatewayResponse:
-        time.sleep(ms / 1000)
+    def wait(self, ms: Any) -> Any:
+        sleep(ms / 1000)
 
-    def _receive(self) -> GatewayResponse:
+    def receive(self) -> dict:
         response = self.ws.recv()
         if response:
-            return json.loads(response)
+            return ujson.loads(response)
 
-    def _heartbeat(self, interval: Any) -> GatewayResponse:
+    def close(self) -> None:
+        self.ws.close()
+
+    @run_on_low_level
+    def heartbeat(self, interval: Any) -> None:
         while True:
-            self._wait(interval)
-            _content = {
+            self.wait(interval)
+            content = {
                 "op": 1,
                 "d": None
             }
-            self._send(_content)
+            self.send(content)
 
-    def _login(self) -> GatewayResponse:
+    def login(self, token: str) -> Any:
+        self.token = token
         self.ws.connect("wss://gateway.discord.gg/?v=6&encoding=json")
-        _event = self._receive()
-        _heartbeat_interval = _event["d"]["heartbeat_interval"]
+        self.event = self.receive()
+        heartbeat_interval = self.event["d"]["heartbeat_interval"]
 
-        start_new_thread(self._heartbeat, (_heartbeat_interval, ))
+        self.heartbeat(heartbeat_interval)
 
         _payload = {
             "op": 2,
@@ -53,15 +55,15 @@ class GatewayBot:
                 }
             }
         }
-        self._send(_payload)
+        self.send(_payload)
         self.ready = True
 
         if self.ready:
-            print("봇이 준비되다?!??!?!?!?!?")
+            logging.info("봇이 준비되다?!!??!")
 
         while True:
-            _event = self._receive()
-            op = _event["op"]
+            self.event = self.receive()
+            op = self.event["op"]
 
             if op >= 11:
                 logging.info("심장 박동을 보내다!")
