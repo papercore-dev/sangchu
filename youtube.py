@@ -1,4 +1,4 @@
-from httpx import request
+from requests import get
 from pymongo import MongoClient
 from extensions import DictSerializerMixin
 
@@ -16,7 +16,7 @@ class LastVideo(DictSerializerMixin):
     def get(self):
         channel = "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=%s&maxResults=10&order=date&type=video&key=%s"%(self.id, self.api_key)
 
-        lastVideo = request("GET", channel).json()["items"][0]
+        lastVideo = get(channel).json()["items"][0]
 
         return "https://www.youtube.com/watch?v=%s"%lastVideo["id"]["videoId"]
 
