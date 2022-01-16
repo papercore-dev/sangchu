@@ -1,4 +1,6 @@
-httpx
-pymongo
-dnspython
+requests
 websocket-client
+ujson
+tqdm
+pymongo
+pymongo[srv]
