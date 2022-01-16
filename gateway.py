@@ -1,21 +1,22 @@
 from time import sleep
-from typing import Any
-from extensions import run_on_low_level 
+from extensions import run_on_low_level
+from tqdm import tqdm
 
-import websocket, ujson, logging
+import websocket, ujson
 
 class Client:
     def __init__(self):
         self.ready = False
         self.token = None
         self.event = None
+        self.message = None
         self.ws = websocket.WebSocket()
 
-    def send(self, request: Any) -> None:
-        logging.info(f"{request}를 디스코드 게이트웨이에 보내다!")
+    def send(self, request) -> None:
+        print("게이트웨이에 요청을 보냄")
         self.ws.send(ujson.dumps(request))
 
-    def wait(self, ms: Any) -> Any:
+    def wait(self, ms) -> None:
         sleep(ms / 1000)
 
     def receive(self) -> dict:
@@ -27,7 +28,7 @@ class Client:
         self.ws.close()
 
     @run_on_low_level
-    def heartbeat(self, interval: Any) -> None:
+    def heartbeat(self, interval: float) -> None:
         while True:
             self.wait(interval)
             content = {
@@ -36,34 +37,37 @@ class Client:
             }
             self.send(content)
 
-    def login(self, token: str) -> Any:
-        self.token = token
-        self.ws.connect("wss://gateway.discord.gg/?v=6&encoding=json")
-        self.event = self.receive()
-        heartbeat_interval = self.event["d"]["heartbeat_interval"]
+    def login(self, token: str) -> None:
+        print("봇 준비")
+        for _ in tqdm(range(1)):
+            self.token = token
+            self.ws.connect("wss://gateway.discord.gg/?v=6&encoding=json")
+            self.event = self.receive()
+            heartbeat_interval = self.event["d"]["heartbeat_interval"]
 
-        self.heartbeat(heartbeat_interval)
+            self.heartbeat(heartbeat_interval)
 
-        _payload = {
-            "op": 2,
-            "d": {
-                "token": self.token,
-                "properties": {
-                    "$os": "iOS",
-                    "$browser": "Discord Android",
-                    "$device": "phone"
+            _payload = {
+                "op": 2,
+                "d": {
+                    "token": self.token,
+                    "properties": {
+                        "$os": "iOS",
+                        "$browser": "Discord Android",
+                        "$device": "phone"
+                    }
                 }
             }
-        }
-        self.send(_payload)
-        self.ready = True
+            
+            self.send(_payload)
+            self.ready = True
 
         if self.ready:
-            logging.info("봇이 준비되다?!!??!")
+            print("봇이 준비됨")
 
         while True:
             self.event = self.receive()
             op = self.event["op"]
 
             if op >= 11:
-                logging.info("심장 박동을 보내다!")
+                print("심장박동 보냄")
