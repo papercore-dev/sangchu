@@ -33,14 +33,14 @@ def youtube_notification(
                 say(
                     bot.token,
                     discord_channel_id,
-                    content="수상한 보리 밭에서 상추가 자라다?!?!?!",
+                    content="🥬수상한 보리 밭에서 상추가 자라다?!?!?!",
                     components=[
                         dict(
                             type=1,
                             components=[
                                 dict(
                                     type=2,
-                                    label="이를 클릭!?!??!",
+                                    label="이를 클릭하다?!??!",
                                     style=5,
                                     url=last_video
                                 )
